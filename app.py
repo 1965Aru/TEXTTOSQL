@@ -14,7 +14,7 @@ geneai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 def get_gemini_response(question, prompt):
     model = geneai.GenerativeModel('gemini-pro')
     response = model.generate_content([prompt[0], question])
-    return response.text
+    return response.text.strip()  # Ensure clean output
 
 # Function to retrieve query from the SQL database
 def read_sql_query(sql, db):
@@ -58,7 +58,7 @@ prompt = [
 
 # Streamlit App
 st.set_page_config(page_title="I can Retrieve Any SQL query")
-st.header("Gemini App To Retrieve SQL Data")
+st.header("App To Retrieve SQL Data")
 
 question = st.text_input("Input: ", key="input")
 
@@ -69,11 +69,20 @@ if submit:
     # Get response from Gemini model for SQL query
     response = get_gemini_response(question, prompt)
     
-    # Retrieve data from the database using the generated SQL query
-    columns, data = read_sql_query(response, "student.db")
+    # Display the generated SQL query
+    st.subheader("Generated SQL Query")
+    st.code(response, language="sql")
     
-    # Display the query result in a table
-    if data:
-        df = pd.DataFrame(data, columns=columns)
-        st.subheader("The Response Data")
-        st.dataframe(df)
+    # Retrieve data from the database using the generated SQL query
+    try:
+        columns, data = read_sql_query(response, "student.db")
+        
+        # Display the query result in a table
+        if data:
+            df = pd.DataFrame(data, columns=columns)
+            st.subheader("The Response Data")
+            st.dataframe(df)
+        else:
+            st.write("No data found for the generated query.")
+    except sqlite3.Error as e:
+        st.error(f"An error occurred: {e}")
